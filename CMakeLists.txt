@@ -27,16 +27,20 @@ enable_testing()
 set(LIB_CORE ifopt_core)
 add_subdirectory(ifopt_core)
 
-option(BUILD_IPOPT "compile with IPOPT solver" ON)
-if (BUILD_IPOPT)
-  add_subdirectory(ifopt_ipopt)
+option(BUILD_NLOPT "compile with NLOPT solver" ON)
+if (BUILD_NLOPT)
+    add_subdirectory(ifopt_nlopt)
 endif()
+
+#option(BUILD_IPOPT "compile with IPOPT solver" OFF)
+#if (BUILD_IPOPT)
+#  add_subdirectory(ifopt_ipopt)
+#endif()
 
 option(BUILD_SNOPT "compile with SNOPT solver" OFF)
 if (BUILD_SNOPT)
   add_subdirectory(ifopt_snopt)
 endif()
-
 
 ##################################################
 ## Install find scripts for find_package(ifopt) ##

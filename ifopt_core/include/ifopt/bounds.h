@@ -62,7 +62,7 @@ struct Bounds {
 };
 
 // settings this as signals infinity for IPOPT/SNOPT solvers
-static const double inf = 1.0e20;
+static const double inf = HUGE_VAL;
 
 static const Bounds NoBound          = Bounds(-inf, +inf);
 static const Bounds BoundZero        = Bounds(0.0, 0.0);
