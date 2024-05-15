@@ -82,6 +82,8 @@ class ConstraintSet : public Component {
    */
   Jacobian GetJacobian() const final;
 
+  Jacobian GetJacobian(VectorXd x) const final;
+
   /**
    * @brief Set individual Jacobians corresponding to each decision variable set.
    * @param var_set  Set of variables the current Jacobian block belongs to.
@@ -106,6 +108,8 @@ class ConstraintSet : public Component {
    */
   virtual void FillJacobianBlock(std::string var_set,
                                  Jacobian& jac_block) const = 0;
+
+  virtual void FillJacobianBlock(VectorXd x, Jacobian& jac_block) const = 0;
 
  protected:
   /**

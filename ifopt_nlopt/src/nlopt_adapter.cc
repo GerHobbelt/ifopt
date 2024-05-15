@@ -3,10 +3,11 @@
 
 namespace Nlopt {
 
-NloptAdapter::NloptAdapter(Nlopt::NloptAdapter::Problem& nlp, bool finite_diff)
+NloptAdapter::NloptAdapter(Problem& nlp, bool finite_diff)
 {
   nlp_         = &nlp;
   finite_diff_ = finite_diff;
+  opt_ = nlopt_create(NLOPT_LD_AUGLAG, nlp_->GetNumberOfOptimizationVariables());
 }
 
 void NloptAdapter::Solve()
@@ -17,11 +18,11 @@ void NloptAdapter::Solve()
   nlopt_version(&major, &minor, &bugfix);
   std::cout << "Nlopt version: " << major << "." << minor << "." << bugfix
             << std::endl;
+  nlopt_set_maxtime(opt_, 10);
+  nlopt_set_ftol_rel(opt_, 1e-4);
+  nlopt_set_ftol_abs(opt_, 1e-4);
 
-  auto n = nlp_->GetNumberOfOptimizationVariables();
-  std::cout << "Number of optimization variables: " << n << std::endl;
-  opt_ = nlopt_create(NLOPT_LD_SLSQP, n);
-
+  auto n          = nlp_->GetNumberOfOptimizationVariables();
   auto bounds_x   = nlp_->GetBoundsOnOptimizationVariables();
   double* x_lower = new double[n];
   double* x_upper = new double[n];
@@ -37,20 +38,61 @@ void NloptAdapter::Solve()
   auto setUpper = nlopt_set_upper_bounds(opt_, x_upper);
   std::cout << "Set upper bounds result: " << setUpper << std::endl;
 
-  double* g_l   = new double[n];
-  double* g_u   = new double[n];
-  auto bounds_g = nlp_->GetBoundsOnConstraints();
-  for (std::size_t c = 0; c < bounds_g.size(); ++c) {
-    g_l[c] = bounds_g.at(c).lower_;
-    g_u[c] = bounds_g.at(c).upper_;
+  // double* g_l   = new double[n];
+  // double* g_u   = new double[n];
+  // auto bounds_g = nlp_->GetBoundsOnConstraints();
+  // for (std::size_t c = 0; c < bounds_g.size(); ++c) {
+  //   g_l[c] = bounds_g.at(c).lower_;
+  //   g_u[c] = bounds_g.at(c).upper_;
+  //
+  //   if (g_l[c] == g_u[c]) {
+  //     std::cout << "Equality constraint: " << c << std::endl;
+  //     auto data     = std::make_shared<NloptAdapterConstraintWrapper>();
+  //     data->adapter = this;
+  //     data->index   = static_cast<int>(c);
+  //
+  //     auto eqRes = nlopt_add_equality_constraint(opt_, NloptAdapter::eval_g,
+  //                                                &data, 1e-8);
+  //     std::cout << "Add equality constraint result: " << eqRes << std::endl;
+  //   } else if (std::isinf(g_l[c])) {
+  //     std::cout << "Inequality constraint lower: " << c << std::endl;
+  //   } else {
+  //     std::cout << "Inequality constraint upper: " << c << std::endl;
+  //   }
+  // }
 
-    if (g_l[c] == g_u[c]) {
-      std::cout << "Equality constraint: " << c << std::endl;
-      auto eqRes =
-          nlopt_add_equality_constraint(opt_, NloptAdapter::eval_g, this, 1e-8);
-      std::cout << "Add equality constraint result: " << eqRes << std::endl;
-    } else {
-      std::cout << "Inequality constraint: " << c << std::endl;
+  auto constraints = nlp_->GetConstraints();
+  auto vec         = constraints.GetComponents();
+  for (size_t i = 0; i < vec.size(); i++) {
+    auto constraint    = vec[i];
+    auto bounds        = constraint->GetBounds();
+    int numConstraints = constraint->GetRows();
+    for (int j = 0; j < numConstraints; j++) {
+      ifopt::Bounds bound = bounds[j];
+      double lower        = bound.lower_;
+      double upper        = bound.upper_;
+      auto data           = NloptAdapterConstraintWrapper{*constraint, j};
+      if (lower == upper) {
+        data.equality = 0;
+        data.bounds   = lower;
+        std::cout << "Add equality constraint: " << std::endl;
+        auto res = nlopt_add_equality_constraint(opt_, NloptAdapter::eval_g, &data, 1e-8);
+        std::cout << "Add equality constraint result: " << res << std::endl;
+      } else if (std::isinf(lower) && !std::isinf(upper)) {
+        data.equality = 1;
+        data.bounds   = upper;
+        std::cout << "Add inequality constraint: " << std::endl;
+        auto res= nlopt_add_inequality_constraint(opt_, NloptAdapter::eval_g, &data,
+                                        1e-8);
+        std::cout << "Add inequality constraint result: " << res << std::endl;
+      } else {
+        data.equality = 1;
+        data.bounds   = lower;
+        std::cout << "Add inequality constraint: " << std::endl;
+        auto res = nlopt_add_inequality_constraint(opt_, NloptAdapter::eval_g, &data,
+                                        1e-8);
+        std::cout << "Add inequality constraint result: " << res << std::endl;
+      }
     }
   }
 
@@ -66,15 +108,13 @@ void NloptAdapter::Solve()
   double minF;
   auto res = (nlopt_result)nlopt_optimize(opt_, x, &minF);
   std::cout << "Nlopt result: " << res << std::endl;
-  std::cout << "Optimal f: " << minF << std::endl;
+  std::cout << "Optimal objective: " << minF << std::endl;
 
   std::cout << "Optimal x: " << x[0] << ", " << x[1] << std::endl;
 
   delete[] x;
   delete[] x_lower;
   delete[] x_upper;
-  delete[] g_l;
-  delete[] g_u;
 }
 
 NloptAdapter::~NloptAdapter()
@@ -84,6 +124,7 @@ NloptAdapter::~NloptAdapter()
 }
 
 double count = 0;
+
 double NloptAdapter::eval_f(unsigned n, const double* x, double* grad_f,
                             void* data)
 {
@@ -100,20 +141,21 @@ double NloptAdapter::eval_f(unsigned n, const double* x, double* grad_f,
 double NloptAdapter::eval_g(unsigned n, const double* x, double* grad_g,
                             void* data)
 {
-  std::cout << "num constraints: " << n << std::endl;
-  auto adapter = static_cast<NloptAdapter*>(data);
-  auto gEig    = adapter->nlp_->EvaluateConstraints(x);
-  auto jac     = adapter->nlp_->GetJacobianOfConstraints();
-  std::cout << "Jacobian: " << jac << std::endl;
+  auto adapter = static_cast<NloptAdapterConstraintWrapper*>(data);
+  Eigen::Map<const Eigen::VectorXd> inputX(x, n);
+  auto gEig  = adapter->component.GetValues(inputX);
+  auto jac   = adapter->component.GetJacobian(inputX);
+  auto index = adapter->index;
   if (grad_g) {
-    grad_g[0] = jac.coeff(0, 0);
-    grad_g[1] = jac.coeff(0, 1);
+    for (int i = 0; i < n; i++) {
+      grad_g[i] = jac.coeff(index, i);
+    }
   }
 
-  // adapter->nlp_->EvalNonzerosOfJacobian(x, grad_g);
-  // std::cout << "Equality: " << gEig[0] << std::endl;
-  // std::cout << "grad_g: " << grad_g[0] << std::endl;
-  return gEig[0] - 1;
+  // if (adapter->equality == 0)
+  //   return std::abs(adapter->bounds - gEig[index]);
+
+  return adapter->bounds - gEig[index];
 }
 
 }  // namespace Nlopt

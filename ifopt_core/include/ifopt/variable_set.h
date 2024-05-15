@@ -53,11 +53,21 @@ class VariableSet : public Component {
   VariableSet(int n_var, const std::string& name);
   virtual ~VariableSet() = default;
 
+  VectorXd GetValues(VectorXd x) const final
+  {
+    throw std::runtime_error("not implemented for variables");
+  }
+
   // doesn't exist for variables, generated run-time error when used.
   Jacobian GetJacobian() const final
   {
     throw std::runtime_error("not implemented for variables");
   };
+
+  Jacobian GetJacobian(VectorXd x) const final
+  {
+    throw std::runtime_error("not implemented for variables");
+  }
 };
 
 }  // namespace ifopt

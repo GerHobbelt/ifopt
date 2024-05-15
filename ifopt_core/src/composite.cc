@@ -134,6 +134,11 @@ Composite::VectorXd Composite::GetValues() const
   return g_all;
 }
 
+Component::VectorXd Composite::GetValues(VectorXd x) const
+{
+  throw std::runtime_error("not implemented for composite");
+}
+
 void Composite::SetVariables(const VectorXd& x)
 {
   int row = 0;
@@ -160,6 +165,37 @@ Composite::Jacobian Composite::GetJacobian() const
 
   for (const auto& c : components_) {
     const Jacobian& jac = c->GetJacobian();
+    triplet_list.reserve(triplet_list.size() + jac.nonZeros());
+
+    for (int k = 0; k < jac.outerSize(); ++k)
+      for (Jacobian::InnerIterator it(jac, k); it; ++it)
+        triplet_list.push_back(
+            Eigen::Triplet<double>(row + it.row(), it.col(), it.value()));
+
+    if (!is_cost_)
+      row += c->GetRows();
+  }
+
+  jacobian.setFromTriplets(triplet_list.begin(), triplet_list.end());
+  return jacobian;
+}
+
+Composite::Jacobian Composite::GetJacobian(const VectorXd x) const
+{
+  // since number doesn't change during the optimization. Improves efficiency.
+  if (n_var == -1)
+    n_var = components_.empty() ? 0 : components_.front()->GetJacobian().cols();
+
+  Jacobian jacobian(GetRows(), n_var);
+
+  if (n_var == 0)
+    return jacobian;
+
+  int row = 0;
+  std::vector<Eigen::Triplet<double>> triplet_list;
+
+  for (const auto& c : components_) {
+    const Jacobian& jac = c->GetJacobian(x);
     triplet_list.reserve(triplet_list.size() + jac.nonZeros());
 
     for (int k = 0; k < jac.outerSize(); ++k)

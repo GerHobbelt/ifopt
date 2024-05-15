@@ -20,7 +20,6 @@ target_link_libraries(${LIB_NLOPT}
         ${LIB_CORE}
         PRIVATE
         ${NLOPT_LIBRARIES}
-        ${NLOPT_LINK_FLAGS}
 )
 target_compile_definitions(${LIB_NLOPT}
         PRIVATE

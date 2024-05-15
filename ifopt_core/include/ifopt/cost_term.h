@@ -60,6 +60,8 @@ class CostTerm : public ConstraintSet {
    */
   VectorXd GetValues() const final;
 
+  VectorXd GetValues(VectorXd x) const final;
+
   /**
    * @brief  Returns infinite bounds (e.g. no bounds).
    */
