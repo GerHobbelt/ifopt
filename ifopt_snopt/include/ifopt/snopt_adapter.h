@@ -27,7 +27,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef IFOPT_INCLUDE_OPT_SNOPT_ADAPTER_H_
 #define IFOPT_INCLUDE_OPT_SNOPT_ADAPTER_H_
 
-#include <snoptProblem.hpp>
+//#include <snoptProblem.hpp>
 
 #include <ifopt/problem.h>
 
@@ -45,7 +45,7 @@ namespace ifopt {
  * This implements the Adapter pattern. This class should not add any
  * functionality, but merely delegate it to the Adaptee (the Problem object).
  */
-class SnoptAdapter : public snoptProblemA {
+class SnoptAdapter : public Problem {
  public:
   using NLPPtr   = Problem*;
   using VectorXd = Problem::VectorXd;

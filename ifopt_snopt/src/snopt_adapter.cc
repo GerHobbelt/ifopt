@@ -38,20 +38,20 @@ SnoptAdapter::SnoptAdapter(Problem& ref)
 void SnoptAdapter::Init()
 {
   int obj_count = nlp_->HasCostTerms() ? 1 : 0;
-  n             = nlp_->GetNumberOfOptimizationVariables();
-  neF           = nlp_->GetNumberOfConstraints() + obj_count;
+  int n         = nlp_->GetNumberOfOptimizationVariables();
+  int neF       = nlp_->GetNumberOfConstraints() + obj_count;
 
-  x      = new double[n];
-  xlow   = new double[n];
-  xupp   = new double[n];
-  xmul   = new double[n];
-  xstate = new int[n];
+  auto x      = new double[n];
+  auto xlow   = new double[n];
+  auto xupp   = new double[n];
+  auto xmul   = new double[n];
+  auto xstate = new int[n];
 
-  F      = new double[neF];
-  Flow   = new double[neF];
-  Fupp   = new double[neF];
-  Fmul   = new double[neF];
-  Fstate = new int[neF];
+  auto F = new double[neF];
+  auto Flow = new double[neF];
+  auto Fupp = new double[neF];
+  auto Fmul = new double[neF];
+  auto Fstate = new int[neF];
 
   // Set the upper and lower bounds.
   // no bounds on the spline coefficients or footholds
@@ -84,26 +84,26 @@ void SnoptAdapter::Init()
   VectorXd x_all                            = nlp_->GetVariableValues();
   Eigen::Map<VectorXd>(&x[0], x_all.rows()) = x_all;
 
-  ObjRow =
+  auto ObjRow =
       nlp_->HasCostTerms()
           ? 0
           : -1;  // the row in user function that corresponds to the objective function
-  ObjAdd = 0.0;  // the constant to be added to the objective function
+  auto ObjAdd = 0.0;  // the constant to be added to the objective function
 
   // no linear derivatives/just assume all are nonlinear
-  lenA  = 0;
-  neA   = 0;
-  iAfun = nullptr;
-  jAvar = nullptr;
-  A     = nullptr;
+  auto lenA = 0;
+  auto neA  = 0;
+  auto iAfun = nullptr;
+  auto jAvar = nullptr;
+  auto A     = nullptr;
 
   // derivatives of nonlinear part
-  lenG  = obj_count * n + nlp_->GetJacobianOfConstraints().nonZeros();
-  iGfun = new int[lenG];
-  jGvar = new int[lenG];
+  auto lenG = obj_count * n + nlp_->GetJacobianOfConstraints().nonZeros();
+  auto iGfun = new int[lenG];
+  auto jGvar = new int[lenG];
 
   // the gradient terms of the cost function
-  neG = 0;  // nonzero cells in jacobian of Cost Function AND Constraints
+  auto neG = 0;  // nonzero cells in jacobian of Cost Function AND Constraints
 
   // the nonzero elements of cost function (assume all)
   if (nlp_->HasCostTerms()) {
