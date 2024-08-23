@@ -2,3 +2,6 @@ build
 doc/html
 .vscode
 *.code-workspace
+
+.idea/
+cmake*/

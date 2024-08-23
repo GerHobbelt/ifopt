@@ -73,6 +73,35 @@ ConstraintSet::Jacobian ConstraintSet::GetJacobian() const
   return jacobian;
 }
 
+ConstraintSet::Jacobian ConstraintSet::GetJacobian(VectorXd x) const
+{
+  Jacobian jacobian(GetRows(), variables_->GetRows());
+
+  int col = 0;
+  Jacobian jac;
+  std::vector<Eigen::Triplet<double>> triplet_list;
+
+  for (const auto& vars : variables_->GetComponents()) {
+    int n = vars->GetRows();
+    jac.resize(GetRows(), n);
+
+    FillJacobianBlock(x, jac);
+    // reserve space for the new elements to reduce memory allocation
+    triplet_list.reserve(triplet_list.size() + jac.nonZeros());
+
+    // create triplets for the derivative at the correct position in the overall Jacobian
+    for (int k = 0; k < jac.outerSize(); ++k)
+      for (Jacobian::InnerIterator it(jac, k); it; ++it)
+        triplet_list.push_back(
+            Eigen::Triplet<double>(it.row(), col + it.col(), it.value()));
+    col += n;
+  }
+
+  // transform triplet vector into sparse matrix
+  jacobian.setFromTriplets(triplet_list.begin(), triplet_list.end());
+  return jacobian;
+}
+
 void ConstraintSet::LinkWithVariables(const VariablesPtr& x)
 {
   variables_ = x;
@@ -86,6 +115,11 @@ CostTerm::VectorXd CostTerm::GetValues() const
   VectorXd cost(1);
   cost(0) = GetCost();
   return cost;
+}
+
+CostTerm::VectorXd CostTerm::GetValues(VectorXd x) const
+{
+  throw std::runtime_error("Not implemented for costs");
 }
 
 CostTerm::VecBound CostTerm::GetBounds() const

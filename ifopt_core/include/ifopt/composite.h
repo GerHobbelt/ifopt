@@ -90,6 +90,8 @@ class Component {
    */
   virtual VectorXd GetValues() const = 0;
 
+  virtual VectorXd GetValues(VectorXd x) const = 0;
+
   /**
    * @brief  Returns the "bounds" of this component.
    *
@@ -115,6 +117,8 @@ class Component {
    * @li Not sensible for Variable.
    */
   virtual Jacobian GetJacobian() const = 0;
+
+  virtual Jacobian GetJacobian(VectorXd x) const = 0;
 
   /**
    * @brief Returns the number of rows of this component.
@@ -175,7 +179,9 @@ class Composite : public Component {
 
   // see Component for documentation
   VectorXd GetValues() const override;
+  VectorXd GetValues(VectorXd) const override;
   Jacobian GetJacobian() const override;
+  Jacobian GetJacobian(VectorXd x) const override;
   VecBound GetBounds() const override;
   void SetVariables(const VectorXd& x) override;
   void PrintAll() const;
